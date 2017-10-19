@@ -4,19 +4,19 @@ pub struct Queue<'a, T: Clone + 'a> {
     head: usize
 }
 
-pub fn new<T: Clone>(v: &mut [T]) -> Queue<T> {
-    Queue {
-        v: v,
-        head: 0,
-        tail: 0
-    }
-}
-
 macro_rules! incmod {
     ($x: expr, $mod: expr) => (($x + 1) % $mod);
 }
 
 impl<'a, T: Clone> Queue<'a, T> {
+    pub fn new(v: &'a mut [T]) -> Self {
+        Queue {
+            v: v,
+            head: 0,
+            tail: 0
+        }
+    }
+
     pub fn enqueue(&mut self, x: T) -> Result<(), &'static str> {
         let next_tail = incmod!(self.tail, self.v.len());
         if next_tail == self.head {

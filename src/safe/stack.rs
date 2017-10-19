@@ -3,14 +3,13 @@ pub struct Stack<'a, T: Clone + 'a> {
     top: usize
 }
 
-pub fn new<T: Clone>(v: &mut [T]) -> Stack<T> {
-    Stack {
-        v: v,
-        top: 0
-    }
-}
-
 impl<'a, T: Clone> Stack<'a, T> {
+    pub fn new(v: &'a mut [T]) -> Self {
+        Stack {
+            v: v,
+            top: 0
+        }
+    }
 
     pub fn push(&mut self, x: T) -> Result<(), &'static str> {
         if self.top == self.v.len() - 1 {
