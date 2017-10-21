@@ -1,36 +1,7 @@
-macro_rules! get_id {
-    ($i: expr, parent) => (($i - 1) / 2);
-    ($i: expr, left) => ($i * 2 + 1);
-    ($i: expr, right) => ($i * 2 + 2);
-}
-
-macro_rules! gen_build_heap {
-    ($self: ident) => {
-        for i in (0 .. $self.size / 2).rev() {
-            $self.heapify(i);
-        }
-    }
-}
-
-macro_rules! gen_heapify {
-    ($self: ident, $i: ident, $policy: expr) => {
-        let mut largest = $i;
-        let left = get_id!($i, left);
-        let right = get_id!($i, right);
-
-        if left <= $self.size && $policy(&$self.v[left], &$self.v[$i]) {
-            largest = left;
-        }
-
-        if right <= $self.size && $policy(&$self.v[right], &$self.v[largest]) {
-            largest = right;
-        }
-
-        if largest != $i {
-            $self.v.swap(largest, $i);
-            $self.heapify(largest);
-        }
-    }
+macro_rules! get_node {
+    ($i: expr, Parent) => (($i - 1) / 2);
+    ($i: expr, Left) => ($i * 2 + 1);
+    ($i: expr, Right) => ($i * 2 + 2);
 }
 
 macro_rules! gen_heap_struct {
@@ -44,97 +15,129 @@ macro_rules! gen_heap_struct {
 
 macro_rules! gen_heap_methods {
     ($name: ident,
-     $build: ident,
      $policy: expr,
      $top: ident,
      $extract: ident,
      $update_key: ident
     ) => {
        impl<'a, T: Clone + Ord> $name<'a, T> {
-            pub fn new(v: &'a mut [T]) -> Self {
-                $name {
-                    v: v,
-                    size: 0
-                }
-            }
+           /// Constructs a new heap
+           pub fn new(v: &'a mut [T], size: usize) -> Option<Self> {
+               if size > v.len() {
+                   return None;
+               }
+               let mut heap = $name {
+                   v: v,
+                   size: size
+               };
+               heap.build(); 
+               Some(heap)
+           }
 
-            /// Returns `true` if the $name contains no elements
-            pub fn empty(&self) -> bool {
-                self.size == 0
-            }
+           /// Returns `true` if the $name contains no elements
+           pub fn empty(&self) -> bool {
+               self.size == 0
+           }
 
-            pub fn size(&self) -> usize {
-                self.size
-            }
+           /// Returns the number of elements in the heap
+           pub fn size(&self) -> usize {
+               self.size
+           }
 
-            pub fn $build(&mut self) {
-                gen_build_heap!(self);
-            }
+           /// Builds the heap, called once when created 
+           fn build(&mut self) {
+               for node in (0 .. self.size / 2).rev() {
+                   self.heapify(node);
+               }
+           }
 
-            fn heapify(&mut self, i: usize) {
-                gen_heapify!(self, i, $policy);
-            }
+           fn heapify(&mut self, node: usize) {
+               let mut new = node;
+               let left = get_node!(node, Left);
+               let right = get_node!(node, Right);
 
-            pub fn $top(&self) -> Option<T> {
-                match self.size {
-                    0 => None,
-                    _ => Some(self.v[0].clone())
-                }
-            }
+               // find the node which should be root of this sub-heap
+               if left <= self.size && $policy(&self.v[left], &self.v[node]) {
+                   new = left;
+               }
+               if right <= self.size && $policy(&self.v[right], &self.v[new]) {
+                   new = right;
+               }
 
-            pub fn $extract(&mut self) -> Option<T> {
-                match self.size {
-                    0 => None,
-                    1 => {
-                        self.size = 0;
-                        Some(self.v[0].clone())
-                    },
-                    size => {
-                        let top = self.v[0].clone();
-                        let last = self.v[size - 1].clone();
-                        self.v[0] = last;
-                        self.size = size - 1;
-                        self.heapify(0);
-                        Some(top)
-                    }
-                }
-            }
+               // Set the new root and heapify down if a new root has been found
+               if new != node {
+                   self.v.swap(new, node);
+                   self.heapify(new);
+               }
+           }
+        
+           fn sift_up(&mut self, node: usize) {
+               if node == 0 {
+                   return;
+               }
 
-            fn sift_up(&mut self, i: usize) {
-                let mut i = i;
-                while i > 0 && $policy(&self.v[i], &self.v[get_id!(i, parent)]) {
-                    self.v.swap(i, get_id!(i, parent));
-                    i = get_id!(i, parent);
-                }
-            }
+               let mut node = node;
+               while node > 0  {
+                   let parent = get_node!(node, Parent);
+                   if !$policy(&self.v[node], &self.v[parent]) {
+                       break;
+                   }
+                   self.v.swap(node, parent);
+                   node = parent;
+               }
+           }
 
-            pub fn $update_key(&mut self, i: usize, key: T) -> Result<(), ()> {
-                if !($policy(&key, &self.v[i]) || key == self.v[i]) {
-                    return Err(());
-                }
-                self.v[i] = key;
-                self.sift_up(i);
-                Ok(())
-            }
+           pub fn $top(&self) -> Option<T> {
+               match self.size {
+                   0 => None,
+                   _ => Some(self.v[0].clone())
+               }
+           }
 
-            pub fn insert(&mut self, key: T) -> Result<(), ()> {
-                let size = self.size;
-                if size == self.v.len() {
-                    return Err(());
-                }
+           pub fn $extract(&mut self) -> Option<T> {
+               match self.size {
+                   0 => None,
+                   1 => {
+                       self.size = 0;
+                       Some(self.v[0].clone())
+                   },
+                   size => {
+                       let top = self.v[0].clone();
+                       let last = self.v[size - 1].clone();
+                       self.v[0] = last;
+                       self.size = size - 1;
+                       self.heapify(0);
+                       Some(top)
+                   }
+               }
+           }
 
-                self.v[size] = key.clone();
-                self.sift_up(size);
-                self.size += 1;
-                Ok(())
-            }
-        }
+           pub fn $update_key(&mut self, i: usize, key: T) -> Result<(), ()> {
+               if !($policy(&key, &self.v[i]) || key == self.v[i]) {
+                   return Err(());
+               }
+               self.v[i] = key;
+               self.sift_up(i);
+               Ok(())
+           }
+
+           pub fn insert(&mut self, key: T) -> Result<(), ()> {
+               let size = self.size;
+               if size == self.v.len() {
+                   return Err(());
+               }
+
+               self.v[size] = key.clone();
+               self.sift_up(size);
+               self.size += 1;
+               Ok(())
+           }
+       }
     }
 }
 
 macro_rules! gen_heap {
     ($name: ident,
-     $build: ident,
      $policy: expr,
      $top: ident,
      $extract: ident,
@@ -143,7 +146,6 @@ macro_rules! gen_heap {
         gen_heap_struct!($name);
         gen_heap_methods!(
             $name,
-            $build,
             $policy,
             $top,
             $extract,
