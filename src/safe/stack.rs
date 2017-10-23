@@ -11,6 +11,17 @@ impl<'a, T: Clone> Stack<'a, T> {
         }
     }
 
+    pub fn new_with(v: &'a mut [T], top: usize) -> Result<Self, ()> {
+        if !(top < v.len()) {
+            return Err(());
+        }
+        let stack = Stack {
+            v: v,
+            top: top
+        };
+        Ok(stack)
+    }
+
     pub fn push(&mut self, x: T) -> Result<(), &'static str> {
         if self.top == self.v.len() - 1 {
             return Err("stack is full");

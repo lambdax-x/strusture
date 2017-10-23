@@ -17,6 +17,18 @@ impl<'a, T: Clone> Queue<'a, T> {
         }
     }
 
+    pub fn new_with(v: &'a mut[T], head: usize, tail: usize) -> Result<Self, ()> {
+        if !(head < v.len() && tail < v.len()) {
+            return Err(());
+        }
+        let queue = Queue {
+            v: v,
+            head: head,
+            tail: tail
+        };
+        Ok(queue)
+    }
+
     pub fn enqueue(&mut self, x: T) -> Result<(), &'static str> {
         let next_tail = incmod!(self.tail, self.v.len());
         if next_tail == self.head {
