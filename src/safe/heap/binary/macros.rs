@@ -21,17 +21,26 @@ macro_rules! gen_heap_methods {
      $update_key: ident
     ) => {
        impl<'a, T: Clone + Ord> $name<'a, T> {
-           /// Constructs a new heap
-           pub fn new(v: &'a mut [T], size: usize) -> Option<Self> {
+           /// Constructs a new empty heap
+           pub fn new(v: &'a mut [T]) -> Self {
+               $name {
+                   v: v,
+                   size: 0
+               }
+           }
+
+           /// Constructs a new heap with the `size` number of elements already
+           /// present in the array
+           pub fn new_with(v: &'a mut [T], size: usize) -> Result<Self, ()> {
                if size > v.len() {
-                   return None;
+                   return Err(());
                }
                let mut heap = $name {
                    v: v,
                    size: size
                };
-               heap.build(); 
-               Some(heap)
+               heap.build();
+               Ok(heap)
            }
 
            /// Returns `true` if the $name contains no elements
